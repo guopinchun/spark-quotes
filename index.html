@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>火種語錄｜Spark Quotes</title>
+    <meta name="description" content="一鍵生成激勵人心的火種語錄，適合創業者與行動派。">
+    <style>
+      * { box-sizing: border-box; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+             margin: 0; padding: 24px; line-height: 1.6; }
+      .container { max-width: 760px; margin: 0 auto; }
+      h1 { font-size: 28px; margin: 0 0 8px; }
+      p.lead { color: #555; margin-top: 0; }
+      .card { border: 1px solid #e5e7eb; border-radius: 16px; padding: 20px; margin: 24px 0; }
+      label { display: block; font-weight: 600; margin-bottom: 6px; }
+      input, select, textarea, button {
+        width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #e5e7eb; font-size: 15px;
+      }
+      input:focus, textarea:focus, select:focus { outline: none; border-color: #111827; box-shadow: 0 0 0 3px rgba(17,24,39,.1); }
+      .row { display: grid; grid-template-columns: 1fr; gap: 12px; }
+      @media (min-width: 700px) { .row { grid-template-columns: 1.2fr 1fr; } }
+      .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+      .btn { background: #111827; color: white; border: none; cursor: pointer; font-weight: 600; }
+      .btn.secondary { background: white; color: #111827; border: 1px solid #e5e7eb; }
+      .output { font-size: 20px; white-space: pre-wrap; }
+      .muted { color: #6b7280; }
+      .badge { display: inline-block; background: #f3f4f6; padding: 2px 8px; border-radius: 999px; font-size: 12px; margin-left: 8px; }
+      footer { margin-top: 40px; color: #6b7280; font-size: 13px; }
+      .small { font-size: 12px; }
+      .hidden { display: none; }
+      .right { text-align: right; }
+      .success { color: #047857; }
+      .error { color: #b91c1c; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>火種語錄 <span class="badge">Gemini × Cloudflare Pages</span></h1>
+      <p class="lead">一鍵生成激勵人心的「金句」。鍵詞＋風格＋語氣，按一下就產生。</p>
+
+      <div class="card">
+        <div class="row">
+          <div>
+            <label for="theme">主題（必填）</label>
+            <input id="theme" placeholder="例如：光、行動、專注、長期主義、創業者心態" />
+          </div>
+          <div>
+            <label for="tone">語氣</label>
+            <select id="tone">
+              <option value="精煉銳利">精煉銳利</option>
+              <option value="溫暖堅定">溫暖堅定</option>
+              <option value="幽默機智">幽默機智</option>
+              <option value="理性務實">理性務實</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <label for="style">風格（可選）</label>
+          <select id="style">
+            <option value="">—</option>
+            <option value="金句短詩（兩行）">金句短詩（兩行）</option>
+            <option value="IG卡片金句（一句）">IG卡片金句（一句）</option>
+            <option value="電梯短講開場句">電梯短講開場句</option>
+            <option value="海報標語（8~12字）">海報標語（8~12字）</option>
+          </select>
+        </div>
+
+        <div class="actions" style="margin-top: 16px;">
+          <button class="btn" id="btn-generate">生成語錄</button>
+          <button class="btn secondary" id="btn-copy">複製</button>
+          <span id="status" class="muted small"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="muted small">輸出</div>
+        <div id="result" class="output">（點選「生成語錄」開始）</div>
+      </div>
+
+      <footer>
+        <div class="small">教學用途示範。部署於 Cloudflare Pages，API 金鑰由 Pages Functions 端保護。</div>
+      </footer>
+    </div>
+
+    <script>
+      const btn = document.getElementById('btn-generate');
+      const copyBtn = document.getElementById('btn-copy');
+      const resultEl = document.getElementById('result');
+      const statusEl = document.getElementById('status');
+
+      async function generate() {
+        const theme = document.getElementById('theme').value.trim();
+        const style = document.getElementById('style').value;
+        const tone = document.getElementById('tone').value;
+
+        if (!theme) {
+          resultEl.textContent = "請先輸入主題關鍵詞。";
+          return;
+        }
+
+        btn.disabled = true;
+        statusEl.textContent = "生成中…";
+        resultEl.textContent = "思考中⋯";
+
+        try {
+          const res = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ theme, style, tone })
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            statusEl.textContent = "";
+            resultEl.innerHTML = "<span class='error'>發生錯誤：</span> " + (data.error || res.status);
+            return;
+          }
+          resultEl.textContent = data.text || "（沒有產生內容）";
+          statusEl.innerHTML = "<span class='success'>完成</span>";
+        } catch (err) {
+          resultEl.innerHTML = "<span class='error'>網路或伺服器錯誤：</span> " + err;
+          statusEl.textContent = "";
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      btn.addEventListener('click', generate);
+      copyBtn.addEventListener('click', async () => {
+        const txt = resultEl.textContent || "";
+        if (!txt.trim()) return;
+        try {
+          await navigator.clipboard.writeText(txt);
+          statusEl.innerHTML = "<span class='success'>已複製</span>";
+        } catch (e) {
+          statusEl.textContent = "複製失敗，請手動複製。";
+        }
+      });
+
+      // 快捷鍵：Cmd/Ctrl + Enter
+      document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+          generate();
+        }
+      });
+    </script>
+  </body>
+</html>
